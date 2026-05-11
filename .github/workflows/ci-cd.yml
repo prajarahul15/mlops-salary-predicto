@@ -42,6 +42,9 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest httpx
 
+      - name: Install training dependencies
+        run: pip install scikit-learn pandas numpy
+
       - name: Train model (generates model.pkl & scaler.pkl for tests)
         run: python backend/train_model.py
 
