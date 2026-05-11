@@ -1,0 +1,8 @@
+{
+  "model_type": "LinearRegression",
+  "feature": "YearsExperience",
+  "target": "Salary",
+  "r2_score": 0.9024,
+  "rmse": 7059.04,
+  "training_samples": 24
+}

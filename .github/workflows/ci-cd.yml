@@ -1,0 +1,127 @@
+# ── GitHub Actions CI/CD Pipeline ────────────────────────
+# Triggers on every push to main:
+#   1. Run tests
+#   2. Build Docker images
+#   3. Push to Docker Hub
+#   4. Deploy updated manifests to Kubernetes
+#
+# Required GitHub Secrets:
+#   DOCKER_USERNAME   — Docker Hub username
+#   DOCKER_PASSWORD   — Docker Hub password / access token
+#   KUBE_CONFIG       — base64-encoded kubeconfig file
+
+name: CI/CD — Salary Predictor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  BACKEND_IMAGE:  ${{ secrets.DOCKER_USERNAME }}/salary-api
+  FRONTEND_IMAGE: ${{ secrets.DOCKER_USERNAME }}/salary-ui
+
+jobs:
+
+  # ── Job 1: Test ─────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest httpx
+
+      - name: Run API tests
+        run: pytest backend/tests/ -v --tb=short
+        continue-on-error: false   # fail the pipeline if tests fail
+
+  # ── Job 2: Build & Push Docker Images ──────────────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: test            # only run if tests pass
+    if: github.ref == 'refs/heads/main'   # only on main branch
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set image tag
+        id: tag
+        run: echo "TAG=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_OUTPUT
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.TAG }}
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.TAG }}
+
+  # ── Job 3: Deploy to Kubernetes ─────────────────────────
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+
+      - name: Update image tags in manifests
+        run: |
+          TAG=$(echo $GITHUB_SHA | cut -c1-8)
+          sed -i "s|salary-api:latest|${{ env.BACKEND_IMAGE }}:${TAG}|g"  k8s/backend-deployment.yaml
+          sed -i "s|salary-ui:latest|${{ env.FRONTEND_IMAGE }}:${TAG}|g"  k8s/frontend-deployment.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/backend-deployment.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/salary-api --timeout=120s
+          kubectl rollout status deployment/salary-ui  --timeout=120s
+
+      - name: Verify pods are running
+        run: kubectl get pods -l app=salary-api && kubectl get pods -l app=salary-ui

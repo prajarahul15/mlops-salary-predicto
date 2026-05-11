@@ -1,0 +1,90 @@
+# ── Backend Deployment ────────────────────────────────────
+# Deploys the FastAPI salary prediction API
+# Apply: kubectl apply -f k8s/backend-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salary-api
+  labels:
+    app: salary-api
+    tier: backend
+spec:
+  replicas: 2                          # run 2 pods for high availability
+  selector:
+    matchLabels:
+      app: salary-api
+  template:
+    metadata:
+      labels:
+        app: salary-api
+        tier: backend
+    spec:
+      containers:
+        - name: salary-api
+          image: your-dockerhub-username/salary-api:latest   # replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      restartPolicy: Always
+
+---
+# ── Backend Service ───────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: salary-api-service
+  labels:
+    app: salary-api
+spec:
+  selector:
+    app: salary-api
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP       # internal only; exposed externally via Ingress
+
+---
+# ── Horizontal Pod Autoscaler ─────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: salary-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: salary-api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -1,0 +1,58 @@
+# ── Ingress ───────────────────────────────────────────────
+# Routes external traffic:
+#   /        → frontend (Nginx UI)
+#   /api/*   → backend  (FastAPI)
+#   /docs    → backend  (Swagger UI)
+#   /health  → backend  (health check)
+#
+# Prerequisites:
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+#
+# Apply: kubectl apply -f k8s/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: salary-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: salary.example.com    # replace with your domain or use IP
+      http:
+        paths:
+          # Frontend — catch-all
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: salary-ui-service
+                port:
+                  number: 80
+          # Backend API
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: salary-api-service
+                port:
+                  number: 8000
+          # Swagger docs
+          - path: /docs(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: salary-api-service
+                port:
+                  number: 8000
+          # Health endpoint
+          - path: /health(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: salary-api-service
+                port:
+                  number: 8000

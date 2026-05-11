@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salary Predictor — MLOps Capstone</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #e0e0e0;
+    }
+
+    /* ── Card ─────────────────────────────────────── */
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 40px 48px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ── Header ───────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      background: rgba(99, 179, 237, 0.15);
+      color: #63b3ed;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 100px;
+      border: 1px solid rgba(99, 179, 237, 0.3);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    /* ── Form ─────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      letter-spacing: 0.4px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 14px 50px 14px 18px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.25s, background 0.25s;
+    }
+
+    input[type="number"]:focus {
+      border-color: #63b3ed;
+      background: rgba(99, 179, 237, 0.08);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .unit-tag {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    /* ── Slider ───────────────────────────────────── */
+    input[type="range"] {
+      width: 100%;
+      accent-color: #63b3ed;
+      cursor: pointer;
+      margin-bottom: 6px;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 28px;
+    }
+
+    /* ── Button ───────────────────────────────────── */
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: transform 0.15s, box-shadow 0.25s, opacity 0.2s;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    button:hover  { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(59,130,246,0.5); }
+    button:active { transform: translateY(0);    box-shadow: 0 2px 10px rgba(59,130,246,0.3); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Result ───────────────────────────────────── */
+    #result {
+      margin-top: 28px;
+      padding: 24px;
+      border-radius: 14px;
+      text-align: center;
+      display: none;
+      animation: fadeSlide 0.35s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    #result.success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    #result.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .result-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .result-salary {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: #10b981;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    .result-sub {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    /* ── Model info strip ─────────────────────────── */
+    .model-strip {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-box {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .stat-label { font-size: 0.68rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    .stat-value { font-size: 1rem;    color: #e2e8f0; font-weight: 700; margin-top: 2px; }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      margin-top: 28px;
+      font-size: 0.75rem;
+      color: #334155;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <span class="badge">MLOps Capstone</span>
+  <h1>Salary Predictor</h1>
+  <p class="subtitle">Enter years of professional experience to get an instant salary estimate powered by a trained Linear Regression model.</p>
+
+  <form id="predict-form" onsubmit="predict(event)">
+    <label for="years">Years of Experience</label>
+    <div class="input-wrapper">
+      <input
+        type="number"
+        id="years"
+        min="0.1" max="50" step="0.1"
+        placeholder="e.g. 5.5"
+        required
+        oninput="syncSlider(this.value)"
+      />
+      <span class="unit-tag">yrs</span>
+    </div>
+
+    <label for="slider">Adjust with slider</label>
+    <input
+      type="range"
+      id="slider"
+      min="0.1" max="20" step="0.1"
+      value="5"
+      oninput="syncInput(this.value)"
+    />
+    <div class="slider-labels"><span>0 yrs</span><span>10 yrs</span><span>20 yrs</span></div>
+
+    <button type="submit" id="predict-btn">Predict Salary</button>
+  </form>
+
+  <div id="result"></div>
+
+  <div class="model-strip">
+    <div class="stat-box">
+      <div class="stat-label">Model</div>
+      <div class="stat-value" id="meta-model">—</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">R² Score</div>
+      <div class="stat-value" id="meta-r2">—</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">RMSE</div>
+      <div class="stat-value" id="meta-rmse">—</div>
+    </div>
+  </div>
+</div>
+
+<footer>MLOps Certification Course &nbsp;·&nbsp; Capstone Project &nbsp;·&nbsp; Rahul</footer>
+
+<script>
+  // ── Config ─────────────────────────────────────────────
+  // In Docker Compose, the backend is reachable at http://localhost:8000
+  // In Kubernetes, replace with your Ingress/LoadBalancer URL
+  const API_BASE = window.API_BASE || "http://localhost:8000";
+
+  // ── Slider ↔ Input sync ────────────────────────────────
+  function syncSlider(val) {
+    const s = document.getElementById("slider");
+    if (val >= parseFloat(s.min) && val <= parseFloat(s.max)) s.value = val;
+  }
+
+  function syncInput(val) {
+    document.getElementById("years").value = val;
+  }
+
+  // ── Fetch model metadata on load ───────────────────────
+  async function loadMetadata() {
+    try {
+      const res  = await fetch(`${API_BASE}/metadata`);
+      const data = await res.json();
+      document.getElementById("meta-model").textContent =
+        (data.model_type || "LinearRegression").replace("Regressor", "").trim();
+      document.getElementById("meta-r2").textContent   = data.r2_score ?? "—";
+      document.getElementById("meta-rmse").textContent =
+        data.rmse ? `$${Number(data.rmse).toLocaleString()}` : "—";
+    } catch {
+      // API might not be reachable in static preview — silently ignore
+    }
+  }
+
+  // ── Prediction ─────────────────────────────────────────
+  async function predict(e) {
+    e.preventDefault();
+
+    const years  = parseFloat(document.getElementById("years").value);
+    const btn    = document.getElementById("predict-btn");
+    const result = document.getElementById("result");
+
+    if (isNaN(years) || years <= 0) {
+      showError("Please enter a valid number of years (> 0).");
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = "Predicting…";
+    result.style.display = "none";
+
+    try {
+      const res = await fetch(`${API_BASE}/predict`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ years_experience: years }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `Server error (${res.status})`);
+      }
+
+      const data = await res.json();
+      const salary = Number(data.predicted_salary).toLocaleString("en-US", {
+        style: "currency", currency: "USD", maximumFractionDigits: 0
+      });
+
+      result.className     = "success";
+      result.style.display = "block";
+      result.innerHTML = `
+        <div class="result-label">Estimated Annual Salary</div>
+        <div class="result-salary">${salary}</div>
+        <div class="result-sub">For ${years} year${years !== 1 ? "s" : ""} of experience &nbsp;·&nbsp; ${data.timestamp?.split("T")[0] ?? ""}</div>
+      `;
+
+    } catch (err) {
+      showError(err.message || "Could not reach the prediction API. Is the backend running?");
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = "Predict Salary";
+    }
+  }
+
+  function showError(msg) {
+    const result = document.getElementById("result");
+    result.className     = "error";
+    result.style.display = "block";
+    result.innerHTML     = `<div class="error-msg">⚠ ${msg}</div>`;
+  }
+
+  // Kick off metadata load
+  loadMetadata();
+</script>
+</body>
+</html>

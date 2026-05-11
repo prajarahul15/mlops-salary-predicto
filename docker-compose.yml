@@ -1,0 +1,60 @@
+# ── Docker Compose ────────────────────────────────────────
+# Runs both frontend and backend containers locally
+#
+# Usage:
+#   docker-compose up --build        # build and start
+#   docker-compose up -d             # run in background
+#   docker-compose down              # stop and remove containers
+#   docker-compose logs -f backend   # tail backend logs
+#
+# After startup:
+#   Frontend  → http://localhost:80
+#   Backend   → http://localhost:8000
+#   API Docs  → http://localhost:8000/docs
+
+version: "3.9"
+
+services:
+
+  # ── Backend (FastAPI) ──────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: salary-api
+    image: salary-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - salary-net
+
+  # ── Frontend (Nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: salary-ui
+    image: salary-ui:latest
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - salary-net
+
+# ── Shared network ─────────────────────────────────────
+networks:
+  salary-net:
+    driver: bridge

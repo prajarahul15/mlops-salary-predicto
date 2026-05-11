@@ -1,0 +1,31 @@
+# MLOps Certification Course — Capstone Project
+# Requirements File
+#
+# IMPORTANT: Requires Python 3.10 or 3.11
+# whylogs-sketching has no pre-built wheel for Python 3.12+ on Windows.
+# On Python 3.13 the build will fail unless Visual Studio C++ Build Tools are installed.
+#
+# Recommended setup (Windows):
+#   py -3.11 -m venv venv
+#   venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# Install with: pip install -r requirements.txt
+
+# ── Core ML & Data ─────────────────────────────────────
+scikit-learn==1.7.2
+pandas==2.3.3
+numpy==2.2.6
+
+# ── Visualisation ──────────────────────────────────────
+matplotlib==3.10.8
+
+# ── Experiment Tracking & Model Registry ───────────────
+mlflow==3.12.0
+
+# ── Data Profiling & Model Monitoring (WhyLabs SDK) ────
+whylogs==1.6.4
+
+# ── Interactive Frontend ────────────────────────────────
+streamlit>=1.35.0
+requests>=2.31.0
