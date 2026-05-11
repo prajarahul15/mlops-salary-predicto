@@ -18,7 +18,7 @@ from datetime import datetime
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 # ── Logging ───────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO,
@@ -81,10 +81,11 @@ class PredictRequest(BaseModel):
     years_experience: float = Field(
         ..., gt=0, le=50,
         description="Years of professional experience (must be > 0 and ≤ 50)",
-        example=5.5
+        json_schema_extra={"example": 5.5}
     )
 
-    @validator("years_experience")
+    @field_validator("years_experience")
+    @classmethod
     def round_to_one_decimal(cls, v):
         return round(v, 1)
 
