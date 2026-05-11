@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
     model, scaler, metadata = load_artifacts()
     yield                          # server runs here
     model = scaler = None          # cleanup on shutdown
-    metadata = {}
+    metadata = {} 
 
 
 # ── App ───────────────────────────────────────────────────
